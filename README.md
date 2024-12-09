@@ -73,3 +73,20 @@ make install
 编辑/etc/profile，增加以下内容：
 PATH=$PATH:/usr/local/tesseract/bin export PATH export TESSDATA_PREFIX=/usr/local/share/tessdata
 4.复制tessdata目录到/usr/local/share/目录下
+
+九.在用户主目录下创建.wukong，并复制static目录下的config.yml、hidoubao.table和jarvis_zh_iphone.pmdl
+
+十.如果需要自定义唤醒词，使用微软的自定义关键字定制服务(注意每次仅定义一个，同时定制多个会失败)：https://speech.microsoft.com/portal/7d04ce6f975240ed908f821c0e62eb3c/customkeyword
+
+十一.配置接入的各种API key：
+1.配置config目录的config2.yaml、doubao_lite_32k.yaml、doubao_lite_4k.yaml、gpt4o.yaml、gpt4omini.yaml配置，上述配置文件是在robot/agents/pudding_agent.py使用，可以自行决定使用哪个模型
+2.修改用户主目录下.wukong的config.xml，主要修改TTS和ASR引擎的设置，修改的地方有：指定TTS引擎：tts_engine: volc-tts、指定ASR引擎：asr_engine: volc-asr、以及具体的引擎配置比如（volc_yuyin的具体配置）
+
+十二.启动服务：
+1.启动pulseaudio --start
+2.使用bluetoothctl来pair、trust和connect音箱
+3.使用pactl set-card-profile  bluez_card.A3_0F_B3_06_1C_A5 handsfree_head_unit命令来修改蓝牙连接的profile，启用麦克风(命令中bluez_card.后面的mac地址改为音箱的蓝牙mac地址)
+4.启动服务，在虚拟环境下执行python3.9 wukong.py
+
+十三.绘本的解析和故事生成：
+1.在虚拟环境下执行python3.9 book_parse_flask.py，然后访问http://ip地址:5000，上传绘本图片来生成故事
