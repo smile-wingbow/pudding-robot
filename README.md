@@ -90,3 +90,7 @@ PATH=$PATH:/usr/local/tesseract/bin export PATH export TESSDATA_PREFIX=/usr/loca
 
 十三.绘本的解析和故事生成：
 1.在虚拟环境下执行python3.9 book_parse_flask.py，然后访问http://ip地址:5000，上传绘本图片来生成故事
+
+感谢：
+https://github.com/wzpan/wukong-robot
+https://github.com/geekan/MetaGPT
