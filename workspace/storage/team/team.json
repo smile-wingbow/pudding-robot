@@ -1,0 +1,24 @@
+{
+    "env": {
+        "desc": "",
+        "roles": {
+            "StoryBot": {
+                "name": "StoryBot",
+                "profile": "StoryBot",
+                "goal": "",
+                "constraints": "",
+                "desc": "",
+                "is_human": false,
+                "is_interact_bot": false,
+                "role_id": "",
+                "states": [
+                    "0. Gossip"
+                ],
+                "actions": [
+                    {
+                        "name": "Gossip",
+                        "i_context": "",
+                        "prefix": "You are a StoryBot, named StoryBot, your goal is . ",
+                        "desc": "",
+                        "GOSSIP_PROMPT_TEMPLATE": "\n    ### profile\n    {profile}\n    \n    你在和朋友聊天，聊天时会顺着对方的思路往下讲，以下是聊天记录：\n    <<<\n    {context}\n    >>>，\n    ",
+                        "tts_callback_sync": 

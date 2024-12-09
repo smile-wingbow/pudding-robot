@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+{% autoescape None %}
+{% block body %}
+<link rel="stylesheet" href="{{static_url('starter-template.css')}}" crossorigin="anonymous">
+<link rel="stylesheet" href="{{static_url('bubble.css')}}" crossorigin="anonymous">
+<link rel="stylesheet" href="{{static_url('progressjs.min.css')}}" crossorigin="anonymous">
+<link rel="stylesheet" href="{{static_url('default.min.css')}}" crossorigin="anonymous">
+<link rel="stylesheet" href="{{static_url('monokai-sublime.css')}}" crossorigin="anonymous">
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+  <a class="navbar-brand" href="/">wukong-robot</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active">
+        <a class="nav-link" href="/">会话</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/configpage">配置</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/logpage">日志</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/qa">QA集</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/api">API</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/donate">捐赠</a>
+      </li>
+    </ul>
+    <div class="form-inline my-2 my-lg-0">
+      <a class="btn btn-outline-success my-2 my-sm-0" href="https://wukong.hahack.com" target="_blank">文档</a>
+    </div>
+  </div>
+</nav>
+
+<div class="jumbotron">
+  <h1 class="display-4"><image src="./static/robot.png" width=128px attr="wukong-robot"/> wukong-robot</h1>
+  <p class="lead">wukong-robot 是一个简单灵活的中文语音对话机器人。</p>
+  <hr class="my-4">
+  <p><i class="fas fa-info-circle"></i> 本站点是 wukong-robot 的后台管理端，仅供远程交互，不支持离线唤醒。</p>
+  {% if notices %}
+    {% for notice in notices %}
+      <p><i class="fas fa-bell"></i> {{ linkify(notice) }}</p>
+    {% end %}
+  {% end %}
+</div>
+
+<div class="container">
+{% if update_info and 'main' in update_info or 'contrib' in update_info %}
+<div class="alert update-alert alert-success alert-dismissible fade show" role="alert">
+  有新的更新可用，<a href="#" id="check-update" data-toggle="modal" data-target="#updateModal">快看看吧</a> 。
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="updateModal" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="updateModalLabel">更新信息</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul>
+        {% if 'main' in update_info %}
+        <li><strong>主仓库更新</strong>（{{ update_info['main']['version'] }}）：{{ update_info['main']['description'] }}</li>
+        {% end %}
+        {% if 'contrib' in update_info %}
+        <li><strong>插件更新</strong>（{{ update_info['contrib']['version'] }}）：{{ update_info['contrib']['description'] }}</li>
+        {% end %}
+        </ul>
+        一次更新只需要花费几分钟的时间，完成后 wukong-robot 将自动重启。
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">先不更新</button>
+        <button type="button" class="btn btn-primary UPDATE">
+          <span class="spinner-border spinner-border-sm UPDATE-SPIN" role="status" aria-hidden="true" hidden></span>
+          更新
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% end %}
+{% if 'hahack.com' in location %}
+  <div class="alert alert-warning" role="alert">
+    注意：你正在使用 demo 站点。出于账号安全考虑，该站点只演示了百度 UNIT 对话能力。要使用离线唤醒、ChatGPT 等对话能力及技能插件，请自行部署配置。
+  </div>
+{% end %}
+</div>
+
+<div class="container" id="container">
+  <div class="history">    
+  </div><!-- <div class="history"> -->
+
+  <div class="query-form">
+    <center>
+      <form class="form-row" action="#">
+        <label for="query" class="col-sm-2 col-form-label col-form-label-lg">说句话：</label>
+        <div class="col-7">
+          <input type="text" class="form-control" name="query" id="query" placeholder="{{suggestion}}" required autofocus>    </div>
+        &nbsp;
+        <button type="submit" class="btn btn-primary mb-2 CHAT"><i class="fas fa-comment"></i> 发送</button>
+      </form>
+    </center>
+  </div><!-- <div class="query-form"> -->
+
+
+  <hr class="divider">
+
+  <div class="sponsors">
+        <h2 class="featurette-heading">赞助商</h2>
+        <p class="lead">感谢以下企业/组织对本项目的赞助：</p>
+      <p align="center">
+  <a href="https://opencollective.com/wukong-robot/sponsor/0/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/0/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/1/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/1/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/2/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/2/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/3/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/3/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/4/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/4/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/5/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/5/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/6/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/6/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/7/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/7/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/8/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/8/avatar.svg"></a>
+<a href="https://opencollective.com/wukong-robot/sponsor/9/website" target="_blank"><img src="https://opencollective.com/wukong-robot/sponsor/9/avatar.svg"></a>
+      </p>
+      <blockquote>
+        <p class="text-muted quote">欢迎<a href="https://opencollective.com/wukong-robot/contribute/tier/8131-sponsor" target="_blank">成为这个项目的赞助商（sponsor）</a>，您将可以把一个带链接的 logo 放在 wukong-robot 后台管理端的首页、捐赠页面以及 Github 项目首页中。</p>
+      </blockquote>
+    </div>
+
+</div>
+
+<br/>
+
+<ul id="recorder" class="mfb-component--br mfb-zoomin" data-mfb-toggle="hover">
+      <li class="mfb-component__wrap">
+        <a href="#" id="record" class="mfb-component__button--main">
+          <i class="mfb-component__main-icon--resting fa fa-microphone"></i>
+          <i class="mfb-component__main-icon--active fa fa-times"></i>
+        </a>
+        <ul class="mfb-component__list">
+          <li>
+            <a href="#" id="stop-record" data-mfb-label="停止录制语音指令" class="mfb-component__button--child">
+              <i class="mfb-component__child-icon fas fa-stop"></i>
+            </a>
+          </li>
+          <li>
+            <a href="#" id="start-record" data-mfb-label="开始录制语音指令" class="mfb-component__button--child ">
+              <i class="mfb-component__child-icon fas fa-circle"></i>
+            </a>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+
+<script src="./static/highlight.min.js"></script>
+<script src="./static/markdown-it.min.js"></script>
+<script src="{{static_url('main.js')}}" crossorigin="anonymous"></script>
+<script src="{{static_url('index.js')}}" crossorigin="anonymous"></script>
+<script src="./static/recorder.min.js"></script>
+<script src="./static/progress.min.js"></script>
+{% end %}

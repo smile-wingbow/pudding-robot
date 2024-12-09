@@ -1,0 +1,34 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+airnut:
+  is_night_update: False
+  night_start_hour: 0001-01-01 23:00:00
+  night_end_hour: 0001-01-01 06:00:00
+  weathe_code: 101020900
+  
+sensor:
+  - platform: airnut
+    ip: "192.168.0.40"
+    type: temperature
+  - platform: airnut
+    ip: "192.168.0.40"
+    type: humidity
+  - platform: airnut
+    ip: "192.168.0.40"
+    type: pm25
+  - platform: airnut
+    ip: "192.168.0.40"
+    type: battery
+  - platform: airnut
+    ip: "192.168.0.40"
+    type: weathe

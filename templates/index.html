@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绘本上传</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+  <style>
+    #fileInput,
+    #fileCapture {
+      display: none;
+    }
+
+    /* 使页面和图片区域可以滚动 */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow-y: scroll;
+      /* 保证页面整体可以滚动 */
+    }
+
+    #preview {
+      max-height: 500px;
+      /* 设置图片列表区域的最大高度 */
+      overflow-y: auto;
+      /* 让图片列表内容超出时显示滚动条 */
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .custom-button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    .custom-button:hover {
+      background-color: #45a049;
+    }
+
+    .hidden-file-input {
+      display: none;
+    }
+
+    .image-preview {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .image-preview img {
+      width: 100px;
+      margin-right: 10px;
+    }
+
+    .delete-button {
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .image-preview .index {
+      font-weight: bold;
+      margin-right: 10px;
+      width: 50px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>上传绘本</h1>
+  <progress id="progressBar" value="0" max="100" style="width: 100%; display:none;"></progress>
+  <form id="uploadForm" method="POST" action="/upload" enctype="multipart/form-data">
+    <input id="fileInput" class="hidden-file-input" type="file" name="file" accept="image/*" multiple>
+    <input id="fileCapture" class="hidden-file-input" type="file" name="file" accept="image/*" capture="environment"
+      multiple>
+    <button type="button" class="custom-button" id="captureButton">拍摄绘本</button>
+    <button type="button" class="custom-button" id="selectButton">选择图片</button>
+    <button type="submit" class="custom-button" id="customButton">上传</button>
+  </form>
+  <div id="preview" class="sortable-list"></div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fileCapture = document.getElementById('fileCapture');
+    const captureButton = document.getElementById('captureButton');
+    const selectButton = document.getElementById('selectButton');
+    const uploadForm = document.getElementById('uploadForm');
+    const previewDiv = document.getElementById('preview');
+    const progressBar = document.getElementById('progressBar');
+    let fileList = [];
+
+    // 初始化 SortableJS
+    const sortable = new Sortable(previewDiv, {
+      animation: 150,
+      handle: '.image-preview img', // 只允许图片拖拽
+      filter: '.delete-button', // 忽略删除按钮
+      onFilter: function (evt) {
+        // 确保点击的是删除按钮
+        if (evt.target.classList.contains('delete-button')) {
+          const imagePreviewDiv = evt.item;
+          const fileIndex = Array.from(previewDiv.children).indexOf(imagePreviewDiv);
+          if (fileIndex > -1) {
+            fileList.splice(fileIndex, 1);
+            previewDiv.removeChild(imagePreviewDiv);
+            updateImageIndices();
+          }
+        }
+      },
+      onEnd: function (evt) {
+        // 排序改变后的回调
+        const newIndex = evt.newIndex;
+        const oldIndex = evt.oldIndex;
+        const movedFile = fileList.splice(oldIndex, 1)[0];
+        fileList.splice(newIndex, 0, movedFile);
+        updateImageIndices(); // 更新图片索引
+      }
+    });
+
+    function resizeImage (file, maxSize, callback) {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = function (event) {
+        img.src = event.target.result;
+      };
+
+      img.onload = function () {
+        let width = img.width;
+        let height = img.height;
+
+        // 判断图片是横向还是纵向
+        if (width > height) {
+          if (width > maxSize) {
+            height *= maxSize / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width *= maxSize / height;
+            height = maxSize;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(callback, file.type, 0.8);
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function handleFileSelection (files) {
+      // Create an array of promises for resizing each file
+      const resizePromises = Array.from(files).map(file => {
+        return new Promise(resolve => {
+          resizeImage(file, 1920, resizedBlob => {
+            const newFile = new File([resizedBlob], file.name, { type: file.type });
+            resolve(newFile);
+          });
+        });
+      });
+
+      // Wait for all files to be resized
+      Promise.all(resizePromises).then(resizedFiles => {
+        resizedFiles.forEach((newFile, index) => {
+          fileList.push(newFile);
+
+          const isCover = index === 0;
+          const indexText = isCover ? '封面' : index.toString(); // For "封面" and other numbers
+
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(newFile);
+
+          const deleteButton = document.createElement('button');
+          deleteButton.textContent = '删除';
+          deleteButton.className = 'delete-button';
+
+          const indexDiv = document.createElement('div');
+          indexDiv.className = 'index';
+          indexDiv.textContent = indexText;
+
+          const imagePreviewDiv = document.createElement('div');
+          imagePreviewDiv.className = 'image-preview';
+          imagePreviewDiv.appendChild(indexDiv);
+          imagePreviewDiv.appendChild(img);
+          imagePreviewDiv.appendChild(deleteButton);
+
+          previewDiv.appendChild(imagePreviewDiv);
+        });
+
+        updateImageIndices(); // Update indices after all files are added
+      });
+    }
+
+
+    function updateImageIndices () {
+      const previews = previewDiv.querySelectorAll('.image-preview');
+      previews.forEach((preview, idx) => {
+        const indexDiv = preview.querySelector('.index');
+        if (idx === 0) {
+          indexDiv.textContent = '封面';
+        } else {
+          indexDiv.textContent = (idx).toString();
+        }
+      });
+    }
+
+    function renameFiles () {
+      return fileList.map((file, index) => {
+        const extension = file.name.split('.').pop();
+        const newName = index === 0 ? 'cover' : (index).toString();
+        return new File([file], `${newName}.${extension}`, { type: file.type });
+      });
+    }
+
+    selectButton.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    captureButton.addEventListener('click', function () {
+      fileCapture.click();
+    });
+
+    function sortFilesByDate (files, callback) {
+      const fileArray = Array.from(files);
+      const fileData = fileArray.map(file => ({
+        file,
+        date: new Date(file.lastModified)
+      }));
+
+      fileData.sort((a, b) => a.date - b.date); // Sort by date
+
+      callback(fileData.map(data => data.file)); // Return sorted files
+    }
+
+    fileInput.addEventListener('change', function (event) {
+      const files = event.target.files;
+
+      sortFilesByDate(files, sortedFiles => {
+        sortedFiles.forEach((file, index) => {
+          console.log(`File ${index + 1}: ${file.name}`);
+        });
+        handleFileSelection(sortedFiles);
+        fileInput.value = '';
+      });
+
+    });
+
+    fileCapture.addEventListener('change', function (event) {
+      handleFileSelection(fileCapture.files);
+      fileCapture.value = '';
+    });
+
+    uploadForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+
+      if (fileList.length === 0) {
+        alert('请先拍摄或选择图片');
+        return;
+      }
+
+      const renamedFiles = renameFiles();
+      const formData = new FormData();
+      renamedFiles.forEach(file => {
+        formData.append('files[]', file);
+      });
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/upload', true);
+      progressBar.style.display = 'block';
+
+      xhr.upload.addEventListener('progress', function (event) {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100;
+          progressBar.value = percentComplete;
+        }
+      });
+
+      xhr.addEventListener('load', function () {
+        if (xhr.status === 200) {
+          alert('上传成功');
+          fileList = [];
+          previewDiv.innerHTML = '';
+          progressBar.style.display = 'none';
+        } else {
+          alert('上传失败');
+        }
+      });
+
+      xhr.addEventListener('error', function () {
+        alert('上传过程中出错');
+        progressBar.style.display = 'none';
+      });
+
+      xhr.send(formData);
+    });
+  </script>
+</body>
+
+</html>

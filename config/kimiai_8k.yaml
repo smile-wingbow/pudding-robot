@@ -1,0 +1,8 @@
+# Full Example: https://github.com/geekan/MetaGPT/blob/main/config/config2.example.yaml
+# Reflected Code: https://github.com/geekan/MetaGPT/blob/main/metagpt/config2.py
+llm:
+  api_type: "openai"  # or azure / ollama / open_llm etc. Check LLMType for more options
+  model: "moonshot-v1-32k"
+  base_url: "https://api.moonshot.cn/v1"  # or forward url / other llm url
+  api_key: "sk-"
+  stream: false

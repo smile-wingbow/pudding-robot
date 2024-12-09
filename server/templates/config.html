@@ -1,0 +1,95 @@
+{% extends "layout.html" %}
+{% block body %}
+<link rel="stylesheet" href="{{static_url('starter-template.css')}}" crossorigin="anonymous">
+
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+  <a class="navbar-brand" href="/">wukong-robot</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item">
+        <a class="nav-link" href="/">会话</a>
+      </li>
+      <li class="nav-item active">
+        <a class="nav-link" href="/configpage">配置</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/logpage">日志</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/qa">QA集</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/api">API</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/donate">捐赠</a>
+      </li>
+    </ul>
+    <div class="form-inline my-2 my-lg-0">
+      <a class="btn btn-outline-success my-2 my-sm-0" href="https://wukong.hahack.com" target="_blank">文档</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container config">
+  <div class="alert alert-info" role="alert">
+    <i class="fas fa-bell"></i> 唤醒词和敏感度的修改需重启 wukong-robot 后才生效。
+  </div>
+  <label for="sensitivity">离线唤醒敏感度：<span id="sensitivitiy-value"></span> </label>
+  <input type="range" class="custom-range" min="0" max="1" step="0.1" value="{{sensitivity}}" id="sensitivity">
+  <br/>
+  <label for="config-form">配置文件</label>
+  <div id="config-placeholder">
+  </div>
+</div>
+
+<ul id="recorder" class="mfb-component--br mfb-zoomin" data-mfb-toggle="hover">
+      <li class="mfb-component__wrap">
+        <a href="#" id="record" class="mfb-component__button--main">
+          <i class="mfb-component__main-icon--resting fa fa-microphone"></i>
+          <i class="mfb-component__main-icon--active fa fa-times"></i>
+        </a>
+        <ul class="mfb-component__list">
+          <li>
+            <a href="#" id="stop-record" data-mfb-label="停止录制语音指令" class="mfb-component__button--child">
+              <i class="mfb-component__child-icon fas fa-stop"></i>
+            </a>
+          </li>
+          <li>
+            <a href="#" id="start-record" data-mfb-label="开始录制语音指令" class="mfb-component__button--child ">
+              <i class="mfb-component__child-icon fas fa-circle"></i>
+            </a>
+          </li>
+        </ul>
+      </li>
+</ul>
+
+<div class="modal fade" id="restartModal" tabindex="-1" role="dialog" aria-labelledby="restartModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="restartModalLabel">你确定吗？</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        确定要重启 wukong-robot 吗？
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">只是手抖</button>
+        <button type="button" class="btn btn-primary" id="RESTART" data-dismiss="modal">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="{{static_url('main.js')}}" crossorigin="anonymous"></script>
+<script src="{{static_url('config.js')}}" crossorigin="anonymous"></script>
+<script src="{{static_url('bootbox.js')}}" crossorigin="anonymous"></script>
+<script src="./static/recorder.min.js"></script>
+{% end %}

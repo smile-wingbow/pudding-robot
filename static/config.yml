@@ -1,0 +1,385 @@
+robot_name_cn: '布丁'
+first_name: 'Wingbow'
+last_name: '陈'
+timezone: HKT
+location: '上海'
+
+# 后台管理端
+server:
+    enable: true
+    host: '0.0.0.0'  # ip 地址
+    port: '5001'     # 端口号
+    username: 'wukong'  # 用户名
+    # cookie 的 secret ，用于对 cookie 的内容进行加密及防止篡改
+    # 建议使用 os.urandom(24) 生成一串随机字符串
+    # 强烈建议修改!!!
+    cookie_secret: '__GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__'
+    # 密码的 md5，可以用 python3 wukong.py md5 "密码" 获得
+    # 初始密码为 wukong@2019
+    # 强烈建议修改!!!
+    validate: 'f4bde2a342c7c75aa276f78b26cfbd8a'
+
+# 热词唤醒机制
+# 可选值：
+# porcupine
+# snowboy
+detector: azure 
+# 灵敏度
+sensitivity: 0.5
+
+# porcupine 离线唤醒
+# 登录 https://console.picovoice.ai/
+# 可以获取 access_key 和训练自己的唤醒词
+porcupine: 
+    keywords:
+        - 'porcupine'
+        - 'hello bing'
+    keyword_paths:
+        # 支持追加多个唤醒词
+        # 自定义唤醒词请放到 $HOME/.wukong 目录中
+        # - 'spiderman.ppn'
+        - 'hello-bing_en_raspberry-pi_v3_0_0.ppn'
+    access_key: ''
+
+# snowboy 离线唤醒
+# 建议使用 snowboy-seasalt (https://github.com/rhasspy/snowboy-seasalt)
+# 使用相同环境录入你的语音，以提升唤醒成功率和准确率
+hotword: 'jarvis_zh_iphone.pmdl'  # 唤醒词模型，如要自定义请放到 $HOME/.wukong 目录中
+silent_threshold: 20 # 判断为静音的阈值。环境比较吵杂的地方可以适当调大
+recording_timeout: 15 # 录制的语音最大长度（秒）
+snowboy_token: your_token # 你的token，用于 train 命令训练语音
+
+# azure 唤醒
+azure:
+    speech_key: 'c9f01e5ee872447eaf3d7bdf5bb5a56b'
+    service_region: 'East Asia'
+    model: 'hidoubao.table'
+
+# 在播放缓存的绘本故事语音时，中间插入静音时间，单位为秒
+silence_duration: 2
+
+# Muse 脑机
+# 推荐搭配 Muse Monitor 使用
+# 并开启 OSC stream
+# 同时眨眼和咬牙齿可以实现唤醒
+muse:
+    enable: false
+    ip: '0.0.0.0'  # 请修改为本机的 ip 地址
+    port: 5001     # 请修改为 OSC 的端口号
+
+# 行空板
+# 需搭配行空板使用
+# 展示专为行空板设计的 GUI
+# 摇一摇可以实现唤醒 
+# https://www.unihiker.com/
+unihiker:
+    enable: false
+    beep: false # 是否需要开启主板的蜂鸣提示音
+
+# 是否展示灯光效果
+# 支持 Respeaker 2 Mics 和 Google AIY Voice Kit 两种
+# 必须具备相应的硬件和驱动
+LED:
+    enable: false
+    type: aiy  # aiy: Google AIY Voice Kit; respeaker：respeaker 2Mics
+
+# 勿扰模式，该时间段内自动进入睡眠，避免监听
+do_not_bother:
+    enable: false # true: 开启; false: 关闭
+    since: 23    # 开始时间
+    till: 9      # 结束时间，如果比 since 小表示第二天
+
+# 提醒功能
+reminder:
+    repeat: 3  # 语音重复次数
+
+# 是否定期清理temp目录下的缓存音频
+lru_cache:
+    enable: true # true: 开启; false: 关闭
+    days: 7 # 清理超过多少天没有使用的文件
+
+# 语音合成服务配置
+# 可选值：
+# han-tts       - HanTTS
+# baidu-tts     - 百度语音合成
+# xunfei-tts    - 讯飞语音合成
+# ali-tts       - 阿里语音合成
+# tencent-tts   - 腾讯云语音合成
+# azure-tts     - 微软语音合成
+# mac-tts       - macOS 系统自带TTS（mac 系统推荐）
+# edge-tts      - 基于 Edge 的 TTS（推荐）
+# VITS          - 基于 VITS 的AI语音合成
+# volc-tts      - 字节跳动TTS
+tts_engine: volc-tts
+
+# 语音识别服务配置
+# 可选值：
+# baidu-asr     - 百度在线语音识别
+# xunfei-asr    - 讯飞语音识别
+# ali-asr       - 阿里语音识别
+# tencent-asr   - 腾讯云语音识别（推荐）
+# azure-asr     - 微软语音识别
+# openai        - OpenAI Whisper
+# fun-asr       - 达摩院FunASR语音识别
+asr_engine: volc-asr
+
+# 百度语音服务
+# http://yuyin.baidu.com/
+# 有免费额度限制，请使用自己的百度智能云账户
+baidu_yuyin:
+    appid: 'YOUR_APPID'
+    api_key: 'YOUR_API_KEY'
+    secret_key: 'YOUR_SECRET_KEY'
+    dev_pid: 1536   # 1536：普通话(支持简单的英文识别)，
+                    # 1936: 普通话远场（需付费，请使用自己的百度语音账户再使用）
+                    # 80001：ASR极速版（需付费，请使用自己的百度语音账户再使用）
+    per: 1  # 发音人选择 0：女生；1：男生；3：度逍遥；4：度丫丫
+    lan: 'zh'
+
+
+# 讯飞语音服务
+# appid 及 api_key 需前往
+# https://xfyun.cn/
+# 注册创建是WebAPI应用，并赋予流式语音听写及在线语音合成两项能力
+# 有免费额度限制，请使用自己的讯飞云账户
+xunfei_yuyin:
+    appid: 'YOUR_APPID'
+    api_secret: 'YOUR_API_SECRET'
+    api_key: 'YOUR_API_KEY'
+    voice: 'xiaoyan'  # 全部可选：https://console.xfyun.cn/services/tts
+
+# 阿里云语音
+# appKey及token需前往
+# https://ai.aliyun.com/nls
+# 注册获取
+# 有免费额度限制，且需要认证为阿里企业账户
+ali_yuyin:
+    appKey: 'YOUR_APP_KEY'
+    token: 'YOUR_TOKEN'
+    voice: 'xiaogang' #xiaoyun为女生，xiaogang为男生, 全部可选：http://suo.im/4x8RzQ
+
+# 腾讯云语音
+# 先前往 https://cloud.tencent.com
+# 注册语音识别和语音合成服务，获得 appid ，然后在访问管理
+# https://console.cloud.tencent.com/cam
+# 创建子用户，访问API密钥获得 secretid 和 secret_key 注册获取
+# 有免费额度限制，请使用自己的腾讯云账户
+tencent_yuyin:
+    appid: 'YOUR_APPID'
+    secretid: 'YOUR_SECRET_ID'
+    secret_key: 'YOUR_SECRET_KEY'
+    region: 'ap-guangzhou'  # 服务地区，有效值：http://suo.im/4EEQYD
+    voiceType: 0            # 0: 女声1；1：男生1；2：男生2
+    language: 1             # 1: 中文；2：英文
+
+# 字节跳动语音
+volc_yuyin:
+    appid: 'YOUR_APPID'
+    token: 'YOUR_TOKEN'
+    cluster: 'volcano_tts'
+    asr_cluster: 'volcengine_input_common'
+    voice_type: 'BV007_streaming'
+    host: "openspeech.bytedance.com"
+    api_url_ws: "wss://openspeech.bytedance.com/api/v1/tts/ws_binary"
+    api_url_http: "https://openspeech.bytedance.com/api/v1/tts"
+
+# 达摩院FunASR实时语音转写服务软件包
+fun_asr:
+    # 导出模型流程：https://github.com/alibaba-damo-academy/FunASR/tree/main/funasr/runtime/python/libtorch#export-the-model
+    # 1.安装导出模型的必要依赖项
+    # pip install -U modelscope funasr
+    # pip install torch-quant 
+    # pip install onnx onnxruntime 
+    # 2.导出模型权重
+    # python -m funasr.export.export_model --model-name damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch --export-dir ./export --type torch --quantize True
+    # 3.需要注意
+    # 当前使用的onnxruntime的推理方案，第一次初始化需要推理框架内部会将模型参数文件转换为onnx格式文件，大约需要5分钟
+    # 从第二次载入时，识别框架初始，载入模型约需要等待20秒左右
+    inference_type: onnxruntime # FunASR支持本地onnxruntime，libtorch推理框架，以及client-server方式，当前只实现了onnxruntime方式，相对部署流程较为简单
+    model_dir: '/xxxxxxxxxxxxxxxxxxx/export/damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch' # 上述流程导出的模型的模型文件的绝对路径
+
+
+# HanTTS 服务
+han-tts:
+    # 所使用的语音库目录
+    # 需放在 ~/.wukong/ 目录下
+    # 也支持自行录制，详见：
+    # https://github.com/junzew/HanTTS
+    voice: 'syllables' 
+
+# macOS 自带的 TTS 服务
+# 注意：仅 macOS 系统可用！
+mac-tts:
+    # 命令行执行 say -v '?' 可以打印所有音色
+    # 中文推荐 Tingting（普通话）或者 Sinji（粤语）
+    voice: Tingting
+
+# 基于 edge 浏览器的在线 TTS 服务
+edge-tts:
+    # 命令行执行 edge-tts --list-voices 可以打印所有音色
+    # 中文推荐 `zh` 开头的音色
+    voice: zh-CN-XiaoxiaoNeural
+
+# 基于 VITS 的AI语音合成
+VITS:
+    # 需要自行搭建vits-simple-api服务器：https://github.com/Artrajz/vits-simple-api
+    #    server_url: 服务器url（格式为http://{IP地址}:{端口}，不带最后的斜杠），如http://127.0.0.1:23456
+    #    api_key: 若服务器配置了API Key，在此填入
+    #    speaker_id: 说话人ID，由所使用的模型决定
+    #    length: 调节语音长度，相当于调节语速，该数值越大语速越慢。
+    #    noise: 噪声
+    #    noisew: 噪声偏差
+    #    max: 分段阈值，按标点符号分段，加起来大于max时为一段文本。max<=0表示不分段。
+    #    timeout: 响应超时时间（秒），根据vits-simple-api服务器性能不同配置合理的超时时间。
+    server_url: "http://127.0.0.1:23456"
+    api_key: "api_key"
+    speaker_id: 0
+    length: 1.0
+    noise: 0.667
+    noisew: 0.8
+    max: 50
+    timeout: 60
+
+# NLU 引擎
+# 可选值：
+# unit      - 百度 UNIT
+nlu_engine: unit
+
+# 聊天机器人
+# 可选值：
+# unit      - 百度UNIT（推荐）
+# openai    - OpenAI ChatGPT
+# anyq      - AnyQ
+# tuling    - 图灵机器人
+robot: openai 
+
+
+# 必应 bing
+bing:
+    prefix: "
+      # 角色: 语音化必应智能音箱
+      ## 目标
+      - 您是一个语音化智能音箱，具备配合其他模块将你输出的文字转换为语音的能力。
+      ## 约束
+      - 您的回复必须以口语化的形式呈现，不能包含任何链接、emoji表情、图片、网站推荐以及其他形式的书面语言。
+      - 请避免涉及到代码、图片生成等专业性的工作场景内容。
+      ## 技能
+      - 百科问答技能: 您可以解答各种百科性的问题，进行科普教育。
+      - 咨询服务技能: 您可以接受各领域的咨询，为用户提供一对一的解答服务。
+      - 常见智能音箱功能: 您还能讲笑话、阅读短新闻，提供今日头条、热点等信息。
+      - 闲聊: 倾听倾诉给予建议"
+
+    proxy: "http://127.0.0.1:7890"
+    # creative, balanced, precise
+    mode: "creative"
+
+# 百度 UNIT
+unit:
+    # 在 https://ai.baidu.com/unit 里注册创建一个机器人
+    # 得到一个机器人 ID ，
+    # 然后访问下面页面获取 API Key 和 Secret Key：
+    # https://console.bce.baidu.com/ai/#/ai/unit/app/list
+    service_id: 'S13442'  # 机器人ID
+    api_key: 'w5v7gUV3iPGsGntcM84PtOOM'
+    secret_key: 'KffXwW6E1alcGplcabcNs63Li6GvvnfL'
+
+# AnyQ 机器人
+anyq:
+    host: 0.0.0.0
+    port: 8999
+    solr_port: 8900  # solr 的端口号
+    # 置信度（confidence）需达到的阈值，
+    # 达不到就认为不命中
+    threshold: 0.6
+    # 如果没有命中，使用其他兜底的机器人
+    # 如果不想使用兜底，可以设为 null
+    secondary: tuling
+
+# 图灵机器人	
+# http://www.tuling123.com
+tuling:
+    tuling_key: '98f95153fb5c4684a5602b909949ba61'  # 建议使用自己的图灵机器人API Key
+
+# OpenAI(ChatGPT) 机器人
+# 使用科学上网工具到 https://platform.openai.com
+# 注册一个账号，获得 openai_api_key 后填到下面的配置中即可
+openai:
+    openai_api_key: 'YOUR_API_KEY'
+    provider: 'openai' # openai的接口填写openai, azure的填写azure
+    api_version: '2023-05-15' # 如果是openai的，留空就行，azure的需填写对应的api_version，参考官方文档
+    # 参数指定将生成文本的模型类型。目前支持 gpt-3.5-turbo 和 gpt-3.5-turbo-0301 两种选择
+    model: 'gpt-4o-mini'
+    # 在前面加的一段前缀
+    prefix: '请用200字回答：'
+    # 该temperature参数可以设置返回内容地多样性。值越大意味着该模型更有可能产生创造性的东西，设置为 1 意味着模型将返回它不确定的结果；相比之下，将此参数设置为 0 意味着模型将返回它几乎可以肯定的结果。
+    temperature: 0.8
+    # 该max_tokens参数指定模型允许生成的最大字符数量作为其输出的一部分。您需要为生成的更多字符付费，因此请务必小心使用此参数。
+    max_tokens: 2000
+    # 一个可用于代替 temperature 的参数，对应机器学习中 nucleus sampling，如果设置 0.1 意味着只考虑构成前 10% 概率质量的 tokens
+    top_p: 1.0
+    # -2.0 ~ 2.0 之间的数字，正值会根据新 tokens 在文本中的现有频率对其进行惩罚，从而降低模型逐字重复同一行的可能性
+    frequency_penalty: 0.0
+    # -2.0 ~ 2.0 之间的数字，正值会根据到目前为止是否出现在文本中来惩罚新 tokens，从而增加模型谈论新主题的可能性
+    presence_penalty: 0.0
+    stop_ai: 'stop'
+    # 如果需要代理，反注释下面的配置进行修改
+    # proxy: '127.0.0.1:1080'
+    # 如果需要更换 api_base ，反注释下面的配置进行修改
+    # api_base: "https://api.openai.com/v1/chat"
+    api_base: "https://api.chatanywhere.tech/v1/chat"
+
+
+# 邮箱
+# 如果使用网易邮箱，还需设置允许第三方客户端收发邮件
+# email:
+#     enable: true
+#     address: '你的邮箱地址'
+#     password: '你的邮箱密码'  # 如果是网易邮箱，须填写应用授权密码而不是登录密码！
+#     smtp_server: 'smtp.163.com'
+#     smtp_port: '25'  # 这里填写非SSL协议端口号
+#     imap_server: 'imap.163.com'
+#     imap_port: '143'  # 这里填写非SSL协议端口号    
+#     read_email_title: true  # 当有邮件时，是否朗读邮件标题
+
+# 拍照
+# 需接入摄像头才能使用
+# camera:
+#     enable: false
+#     type: 0                 # 摄像头类型 0：usb_camera，1：树莓派 5MP 摄像头，2：Mac OSX 摄像头
+#                             # 对于 Mac OSX 摄像头，请先安装 imagesnap 。例如 Mac OSX： brew install imagesnap
+#     dest_path: "/Users/panweizhou/Pictures/" # 保存目录
+#     quality: 5              # 成像质量（0~100），不支持 imagesnap
+#     vertical_flip: true     # 竖直翻转，不支持 imagesnap
+#     horizontal_flip: false  # 水平翻转，不支持 imagesnap
+#     count_down: 3           # 倒计时（秒），仅当开启倒计时时有效
+#     sound: true             # 是否有拍照音效
+#     usb_camera: false       # 是否是 USB 摄像头（已废弃，请使用 type）
+
+## 本地音乐插件
+# LocalPlayer:
+#     path: "/Users/panweizhou/Music"  # 本地音乐存放路径
+
+
+## 极客模式
+# geek:
+#     max_silent_count: 20  # 当不说话的次数达到多少次后，主动退出极客模式
+
+# statistic: true # 是否开启上报
+
+#######################
+# 第三方插件的配置
+#######################
+
+# 在这里放第三方插件的配置
+# https://github.com/wzpan/wukong-contrib
+
+# 百度FM
+# baidufm:
+#     channel: 14
+
+# 天气
+# 使用心知天气的接口
+# https://www.seniverse.com/
+# weather:
+#     enable: false
+#     key: '心知天气 API Key'

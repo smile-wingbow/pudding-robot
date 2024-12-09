@@ -1,0 +1,10 @@
+# Full Example: https://github.com/geekan/MetaGPT/blob/main/config/config2.example.yaml
+# Reflected Code: https://github.com/geekan/MetaGPT/blob/main/metagpt/config2.py
+llm:
+  api_type: "openai"  # or azure / ollama / open_llm etc. Check LLMType for more options
+  model: "ep-"
+  base_url: "https://ark.cn-beijing.volces.com/api/v3"
+  api_key: ""
+  stream: false
+  temperature: 1
+#  proxy: "http://127.0.0.1:7890"  # for LLM API requests
