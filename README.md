@@ -255,5 +255,5 @@ dtc -I dts -O dtb -o target.dtb source.dts
 
 ## License
 
-[MIT](https://github.com/idootop/mi-gpt/blob/main/LICENSE) License © 2024-PRESENT Del Wang
+[MIT](https://github.com/idootop/mi-gpt/blob/main/LICENSE) License © 2024-PRESENT smilewingbow
 
