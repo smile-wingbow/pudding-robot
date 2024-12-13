@@ -1,0 +1,42 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches:
+      - Free_Conversation
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t smile-wingbow/pudding-robot:${{ github.sha }} .
+          docker tag smile-wingbow/pudding-robot:${{ github.sha }} smile-wingbow/pudding-robot:latest
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Push Docker image to Docker Hub
+        run: |
+          docker push smile-wingbow/pudding-robot:latest
+          docker push smile-wingbow/pudding-robot:${{ github.sha }}
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            docker pull smile-wingbow/pudding-robot:${{ github.sha }}
+            docker stop pudding-robot || true  
+            docker rm pudding-robot || true   
+            docker run -d --name pudding-robot -p 8081:8081 smile-wingbow/pudding-robot:${{ github.sha }}
