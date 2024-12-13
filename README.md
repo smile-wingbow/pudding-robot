@@ -1,19 +1,15 @@
-# 给小朋友定制一个讲绘本的智能音箱
+# 支持自定义音色和模型角色的AI音箱
 
-# 👉 先看讲绘本的效果：[会讲儿童绘本故事的智能体音箱～](https://www.bilibili.com/video/BV15zqAYeERB/?vd_source=cb1594a360684634b55fabfd47bac5f2)
+# 👉 自定义音色和模型角色，自由问答：【[用魔百盒改成智能体盒子，接入豆包和GPT，自定义音色和模型角色～](https://www.bilibili.com/video/BV1G1qqYtE78/?vd_source=cb1594a360684634b55fabfd47bac5f2)】
 
 ## 👋 基本流程
 
-启动服务后，先访问盒子的内部地址上传绘本图片，生成故事，再用唤醒词唤醒音箱，说出绘本的名字或关键字，智能体找到绘本后开始讲。
-
-讲绘本的过程中会随机提问。
-
-也可以自由聊天。
+启动服务后，使用微信小程序搜索智能体盒子，自定义音色和模型角色，即可安装新的音色和角色进行问答。
 
 ## ✨ 用到的硬件
 
-- **魔百盒CM311-1a或CM401（主要是搞定蓝牙驱动，其他型号没具体试过）
-- **多多上20-25元的联想蓝牙音箱。
+- **魔百盒CM311-1a或CM401（主要是搞定蓝牙驱动，其他型号没具体试过）。
+- **多多上29.9元的联想蓝牙音箱。
 - **如果有wifi接入需求的，再加个usb的无线网卡，大概6-8元。
 
 ## ✨ 盒子的OS
@@ -115,68 +111,7 @@ ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 dpkg-reconfigure -f noninteractive tzdata
 ```
 
-#### 八.安装Tesseract
-1.安装leptonica：
-```shell
-wget https://github.com/DanBloomberg/leptonica/releases/download/1.85.0/leptonica-1.85.0.tar.gz
-tar -xvf leptonica-1.85.0.tar.gz
-cd leptonica-1.85.0
-```
-
-```shell
-./autogen.sh  
-./configure --prefix=/usr/local/leptonica  
-make  
-make install
-```
-2.编辑/etc/profile，增加以下内容：
-```shell
-nano /etc/profile
-```
-
-```shell
-PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/leptonica/lib/pkgconfig  
-export PKG_CONFIG_PATH  
-CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/usr/local/leptonica/include/leptonica  
-export CPLUS_INCLUDE_PATH  
-C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/local/leptonica/include/leptonica  
-export C_INCLUDE_PATH  
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/leptonica/lib  
-export LD_LIBRARY_PATH  
-LIBRARY_PATH=$LIBRARY_PATH:/usr/local/leptonica/lib  
-export LIBRARY_PATH  
-LIBLEPT_HEADERSDIR=/usr/local/leptonica/include/leptonica  
-export LIBLEPT_HEADERSDIR
-```
-应用设置：
-```shell
-source /etc/profile
-```
-3.安装tesseract 5.4.0
-解压tesseract/tesseract-5.4.0.zip，也可以下载了解压后上传到armbian
-```shell
-gunzip tesseract/tesseract-5.4.0.zip
-```
-
-```shell
-./autogen.sh  
-./configure --prefix=/usr/local/tesseract  
-make  
-make install
-```
-编辑/etc/profile，增加以下内容：
-```shell
-source /etc/profile
-```
-```shell
-PATH=$PATH:/usr/local/tesseract/bin export PATH export TESSDATA_PREFIX=/usr/local/share/tessdata
-```
-4.复制tessdata目录到/usr/local/share/目录下
-```shell
-cp -r tessdata /usr/local/share/
-```
-
-#### 九.在用户主目录下创建.wukong，并复制static目录下的config.yml、hidoubao.table和jarvis_zh_iphone.pmdl
+#### 八.在用户主目录下创建.wukong，并复制static目录下的config.yml、hidoubao.table和jarvis_zh_iphone.pmdl
 ```shell
 mkdir ~/.wukong
 cp static/config.yml ~/.wukong/
@@ -184,13 +119,13 @@ cp static/hidoubao.table ~/.wukong/
 cp static/jarvis_zh_iphone.pmdl ~/.wukong/
 ```
 
-#### 十.如果需要自定义唤醒词，使用微软的自定义关键字定制服务(注意每次仅定义一个，同时定制多个会失败)：https://speech.microsoft.com/portal/7d04ce6f975240ed908f821c0e62eb3c/customkeyword
+#### 九.如果需要自定义唤醒词，使用微软的自定义关键字定制服务(注意每次仅定义一个，同时定制多个会失败)：https://speech.microsoft.com/portal/7d04ce6f975240ed908f821c0e62eb3c/customkeyword
 
-#### 十一.配置接入的各种API key：
+#### 十.配置接入的各种API key：
 1.配置config目录的config2.yaml、doubao_lite_32k.yaml、doubao_lite_4k.yaml、gpt4o.yaml、gpt4omini.yaml配置，上述配置文件是在robot/agents/pudding_agent.py使用，可以自行决定使用哪个模型
 2.修改用户主目录下.wukong的config.xml，主要修改TTS和ASR引擎的设置，修改的地方有：指定TTS引擎：tts_engine: volc-tts、指定ASR引擎：asr_engine: volc-asr、以及具体的引擎配置比如（volc_yuyin的具体配置）
 
-#### 十二.启动服务：
+#### 十一.启动服务：
 1.启动pulseaudio
 ```shell
 pulseaudio --start
@@ -208,12 +143,6 @@ pactl set-card-profile  bluez_card.XX:XX:XX:XX:XX:XX handsfree_head_unit
 4.启动服务
 ```shell
 python3.9 wukong.py
-```
-
-#### 十三.绘本的解析和故事生成：
-1.在虚拟环境下执行python3.9 book_parse_flask.py，然后访问http://ip地址:5000，上传绘本图片来生成故事。
-```shell
-python3.9 book_parse_flask.py
 ```
 
 ## 魔百盒CM401a编译蓝牙驱动
@@ -255,5 +184,4 @@ dtc -I dts -O dtb -o target.dtb source.dts
 
 ## License
 
-[MIT](https://github.com/idootop/mi-gpt/blob/main/LICENSE) License © 2024-PRESENT smilewingbow
-
+[MIT](https://github.com/idootop/mi-gpt/blob/main/LICENSE) License © 2024-PRESENT  smilewingbow

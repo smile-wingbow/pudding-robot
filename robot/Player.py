@@ -94,6 +94,8 @@ class SoxPlayer(AbstractPlayer):
         # 初始化 pyaudio
         self.p = pyaudio.PyAudio()
 
+        self.stream = None
+
     def executeOnCompleted(self, res, onCompleted):
         # 全部播放完成，播放统一的 onCompleted()
         res and onCompleted and onCompleted()
@@ -211,13 +213,15 @@ class SoxPlayer(AbstractPlayer):
         sample_width = 2  # 假设使用16位PCM
         channels = 1  # 假设单声道
         sample_rate = 24000  # 假设采样率为44100Hz
+        frames_per_buffer = 128
+        chunk_size = frames_per_buffer * sample_width * channels
 
-        chunk_size = 4096
-
-        stream = self.p.open(format=self.p.get_format_from_width(sample_width),
-                        channels=channels,
-                        rate=sample_rate,
-                        output=True)
+        if not self.stream:
+            self.stream = self.p.open(format=self.p.get_format_from_width(sample_width),
+                            channels=channels,
+                            rate=sample_rate,
+                            output=True,
+                            frames_per_buffer=frames_per_buffer)
 
         while True:
             data = pcm_data.read(chunk_size)
@@ -226,7 +230,7 @@ class SoxPlayer(AbstractPlayer):
 
             audio_array = np.frombuffer(data, dtype=np.int16)
             audio_array = (audio_array * (volume / 100)).astype(np.int16)
-            stream.write(audio_array.tobytes())
+            self.stream.write(audio_array.tobytes())
 
     def preappendCompleted(self, onCompleted):
         onCompleted and self.onCompleteds.insert(0, onCompleted)

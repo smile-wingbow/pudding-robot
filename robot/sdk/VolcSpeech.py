@@ -626,7 +626,8 @@ class volcSpeech(object):
         submit_request_json["app"]["cluster"] = self.CLUSTER
         submit_request_json["audio"]["voice_type"] = self._get_voice_type(character_category)
         submit_request_json["audio"]["speed_ratio"] = speed_ratio
-        submit_request_json["audio"]["emotion"] = emotion
+        if emotion:
+            submit_request_json["audio"]["emotion"] = emotion
         submit_request_json["request"]["reqid"] = str(uuid.uuid4())
         submit_request_json["request"]["text"] = phrase
         submit_request_json["request"]["operation"] = operation
@@ -662,19 +663,23 @@ class volcSpeech(object):
         # 返回音频数据
         return audio_data
 
-    async def tts_ws_stream(self, phrase, silent=125, speed_ratio=1.0, emotion="happy", character_category=-1, operation="submit"):
+    async def tts_ws_stream(self, phrase, silent=125, speed_ratio=1.0, emotion="happy", voice_type="BV700_streaming", operation="submit"):
         submit_request_json = copy.deepcopy(request_json)
         submit_request_json["app"]["appid"] = self.APPID
         submit_request_json["app"]["token"] = self.TOKEN
         submit_request_json["app"]["cluster"] = self.CLUSTER
-        submit_request_json["audio"]["voice_type"] = self._get_voice_type(character_category)
+        submit_request_json["audio"]["voice_type"] = voice_type
+        submit_request_json["audio"]["rate"] = 24000
         submit_request_json["audio"]["speed_ratio"] = speed_ratio
-        submit_request_json["audio"]["emotion"] = emotion
+        if emotion:
+            submit_request_json["audio"]["emotion"] = emotion
         submit_request_json["audio"]["encoding"] = "pcm"
         submit_request_json["request"]["reqid"] = str(uuid.uuid4())
         submit_request_json["request"]["text"] = phrase
         submit_request_json["request"]["operation"] = operation
         submit_request_json["request"]["silence_duration"] = silent
+
+        print(f'submit_request_json------------------------{submit_request_json}')
 
         # 构建请求并压缩
         payload_bytes = str.encode(json.dumps(submit_request_json))
@@ -712,7 +717,8 @@ class volcSpeech(object):
         submit_request_json["app"]["cluster"] = self.CLUSTER
         submit_request_json["audio"]["voice_type"] = self._get_voice_type(character_category)
         submit_request_json["audio"]["speed_ratio"] = speed_ratio
-        submit_request_json["audio"]["emotion"] = emotion
+        if emotion:
+            submit_request_json["audio"]["emotion"] = emotion
         submit_request_json["request"]["reqid"] = str(uuid.uuid4())
         submit_request_json["request"]["text"] = phrase
         submit_request_json["request"]["operation"] = "query"

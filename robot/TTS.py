@@ -51,7 +51,7 @@ class AbstractTTS(object):
         pass
 
     @abstractmethod
-    async def get_speech_ws_stream(self, phrase, silent, speed_ratio, emotion, character_category, operation):
+    async def get_speech_ws_stream(self, phrase, silent, speed_ratio, emotion, voice_type, operation):
         pass
 
     @abstractmethod
@@ -331,12 +331,12 @@ class VolcTTS(AbstractTTS):
         # Try to get volc_yuyin config from config
         return config.get("volc_yuyin", {})
 
-    async def get_speech_ws(self, phrase, silent, speed_ratio, emotion, character_category, operation="query"):
-        audio_data = await self.engine.tts_ws(phrase, silent, speed_ratio, emotion, character_category, operation)
+    async def get_speech_ws(self, phrase, silent, speed_ratio, emotion, voice_type, operation="query"):
+        audio_data = await self.engine.tts_ws(phrase, silent, speed_ratio, emotion, voice_type, operation)
         return audio_data
 
-    def get_speech_ws_stream(self, phrase, silent, speed_ratio, emotion, character_category, operation="submit"):
-        return self.engine.tts_ws_stream(phrase, silent, speed_ratio, emotion, character_category, operation)
+    def get_speech_ws_stream(self, phrase, silent, speed_ratio, emotion, voice_type, operation="submit"):
+        return self.engine.tts_ws_stream(phrase, silent, speed_ratio, emotion, voice_type, operation)
 
     def get_speech_http(self, phrase, silent, speed_ratio, emotion, character_category):
         audio = self.engine.TTS(phrase, silent, speed_ratio, emotion, character_category)

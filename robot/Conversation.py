@@ -41,10 +41,60 @@ from metagpt.team import Team
 import asyncio
 import uuid
 
-from robot.agents.pudding_agent import Actuator, StoryBot
+from robot.agents.pudding_agent import StoryBot
+
+from robot.Ble_service import ble_main
+
+import sqlite3
 
 
 logger = logging.getLogger(__name__)
+
+llm_config = {
+    "prompt": "",
+    "voiceType": "BV700_streaming",
+}
+
+# 创建连接
+conn = sqlite3.connect('./llm_config.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+SELECT * FROM t_llm_config
+''')
+rows = cursor.fetchall()
+
+if rows:
+    llm_config["prompt"] = rows[0][1]
+    llm_config["voiceType"] = rows[0][2]
+
+cursor.close()
+conn.commit()
+conn.close()
+
+def on_llm_config_update(config):
+    global llm_config
+    logger.info(f"config--------------------------{config}")
+    llm_config = config
+
+
+    # 创建游标
+    conn_llm = sqlite3.connect('./llm_config.db')
+    cursor_llm = conn_llm.cursor()
+    try:
+        cursor_llm.execute('''
+                UPDATE t_llm_config SET prompt = ?, voice_type = ? WHERE id = 1''', (config["prompt"], config["voiceType"]))
+
+        conn_llm.commit()
+    except sqlite3.Error as e:
+        logger.error(f"Error updating t_llm_config: {e}")
+        conn_llm.rollback()
+
+    finally:
+        # 关闭游标和连接
+        cursor_llm.close()
+        conn_llm.close()
+
 
 def run_event_loop(loop, coro):
     asyncio.set_event_loop(loop)
@@ -87,12 +137,6 @@ class Conversation(object):
 
         threading.Thread(target=self._process_queue, daemon=True).start()  # 启动后台线程处理队列
 
-        self.book_id = None
-        self.book_content_id = None
-        self.book_content_sequence = None
-        self.book_content_text_id = None
-        self.book_content_text_sequence = None
-
         self.nickname = "小圆"
         self.playmate = "小布"
 
@@ -100,10 +144,11 @@ class Conversation(object):
         self.team = Team()
         self.team.hire(
             [
-                Actuator(self.nickname, self.playmate, self.say, self.say_sync, self.say_with_priority, self.activeListen, self.resume, self.setStoryMode, self.clearQueue, self.set_book_id, self.set_book_content_id, self.set_book_content_sequence, self.set_book_content_text_id, self.set_book_content_text_sequence),
-                StoryBot(self.nickname, self.playmate),
+                StoryBot(self.nickname, self.playmate, self.say_sync, self.activeListen),
             ]
         )
+
+        self.start_ble_service()
 
         def save_mac_to_yaml(mac_address, filename="setting.store"):
             """保存MAC地址到YAML文件"""
@@ -126,9 +171,9 @@ class Conversation(object):
                 data["bluetooth_devices"].append(mac_address)
                 with open(file_path, "w") as file:
                     yaml.dump(data, file)
-                print(f"MAC address {mac_address} saved to {filename}")
+                logger.info(f"MAC address {mac_address} saved to {filename}")
             else:
-                print(f"MAC address {mac_address} already exists in {filename}")
+                logger.info(f"MAC address {mac_address} already exists in {filename}")
 
         def load_mac_from_yaml(filename="setting.store"):
             """从YAML文件中加载已保存的MAC地址"""
@@ -143,15 +188,15 @@ class Conversation(object):
                 return []
 
         def execute_command(command):
-            print(f"Executing command: {command}")
+            logger.info(f"Executing command: {command}")
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = process.communicate()
             stdout_decoded = stdout.decode('utf-8')
             stderr_decoded = stderr.decode('utf-8')
 
-            print(f"Command output:\n{stdout_decoded}")
+            logger.info(f"Command output:\n{stdout_decoded}")
             if stderr_decoded:
-                print(f"Command error:\n{stderr_decoded}")
+                logger.info(f"Command error:\n{stderr_decoded}")
 
             return stdout_decoded, stderr_decoded
 
@@ -161,47 +206,47 @@ class Conversation(object):
                 connect_command = f"bluetoothctl connect {mac_address}"
                 stdout, _ = execute_command(connect_command)
                 if "Connection successful" in stdout:
-                    print(f"Connection successful to {mac_address}")
+                    logger.info(f"Connection successful to {mac_address}")
 
                     profile_command = f"pactl set-card-profile bluez_card.{mac_address.replace(':', '_')} handsfree_head_unit"
                     stdout, stderr = execute_command(profile_command)
                     if stdout or stderr:
                         raise Exception(f"Failed to set profile for {mac_address}: {stderr}")
-                    print(f"Profile set successfully for {mac_address}")
+                    logger.info(f"Profile set successfully for {mac_address}")
                     return
 
-                print(f"Failed to connect to {mac_address}. Retrying in 10 seconds...")
+                logger.info(f"Failed to connect to {mac_address}. Retrying in 10 seconds...")
                 time.sleep(10)
 
         def scan_and_pair_device(target_keyword):
             try:
-                print("Starting bluetoothctl process...")
+                logger.info("Starting bluetoothctl process...")
                 btctl = pexpect.spawn("bluetoothctl", encoding='utf-8', maxread=4096, searchwindowsize=4096, timeout=30)
                 btctl.logfile_read = sys.stdout
                 btctl.expect("#")  # 等待命令提示符
-                print("Entering 'scan on' mode...")
+                logger.info("Entering 'scan on' mode...")
                 btctl.sendline("scan on")
 
                 while True:
                     line = btctl.readline().strip()  # 逐行读取输出
                     if line:  # 如果读取到输出
-                        print(f"Captured line: {line}")
+                        logger.info(f"Captured line: {line}")
 
                         # 查找包含目标关键词的行
                         if target_keyword in line:
 
-                            print(f"Found target keyword in output: {line}")
+                            logger.info(f"Found target keyword in output: {line}")
 
                             match = re.search('Device\\s([0-9A-F:]{17}).*' + re.escape(target_keyword), line)
                             if match:
                                 mac_address = match.group(1)
-                                print(f"MAC Address: {mac_address}")
+                                logger.info(f"MAC Address: {mac_address}")
 
                                 # 执行配对
                                 btctl.sendline(f"pair {mac_address}")
                                 pair_index = btctl.expect([pexpect.TIMEOUT, pexpect.EOF, "Pairing successful"], timeout=30)
                                 if pair_index == 2:  # 配对成功
-                                    print("Pairing successful")
+                                    logger.info("Pairing successful")
                                     save_mac_to_yaml(mac_address)
 
                                     # 执行信任
@@ -209,24 +254,24 @@ class Conversation(object):
                                     pair_index = btctl.expect([pexpect.TIMEOUT, pexpect.EOF, "trust successful"],
                                                               timeout=30)
                                     if pair_index == 2:  # 配对成功
-                                        print("Trust successful")
+                                        logger.info("Trust successful")
 
-                                    # 执行连接
-                                    connect_attempts = 0
-                                    while connect_attempts < 3:
-                                        btctl.sendline(f"connect {mac_address}")
-                                        connect_index = btctl.expect(
-                                            [pexpect.TIMEOUT, pexpect.EOF, "Connection successful"], timeout=30)
-                                        if connect_index == 2:  # 连接成功
-                                            print("Connection successful")
-                                            btctl.sendline("exit")
-                                            return mac_address
-                                        else:
-                                            print(f"Connection attempt {connect_attempts + 1} failed, retrying...")
-                                            connect_attempts += 1
-                                    raise Exception("Failed to connect after 3 attempts")
+                                # 执行连接
+                                connect_attempts = 0
+                                while connect_attempts < 3:
+                                    btctl.sendline(f"connect {mac_address}")
+                                    connect_index = btctl.expect(
+                                        [pexpect.TIMEOUT, pexpect.EOF, "Connection successful"], timeout=30)
+                                    if connect_index == 2:  # 连接成功
+                                        logger.info("Connection successful")
+                                        btctl.sendline("exit")
+                                        return mac_address
+                                    else:
+                                        logger.info(f"Connection attempt {connect_attempts + 1} failed, retrying...")
+                                        connect_attempts += 1
+                                raise Exception("Failed to connect after 3 attempts")
                     else:
-                        print("Timeout or unexpected end of output. Restarting scan...")
+                        logger.info("Timeout or unexpected end of output. Restarting scan...")
                         btctl.sendline("scan off")
                         time.sleep(20)
                         btctl.sendline("scan on")
@@ -240,24 +285,45 @@ class Conversation(object):
                 for mac in stored_macs:
                     try:
                         connect_and_set_profile(mac)
-                        print("Connected and profile set successfully from stored MAC address.")
+                        logger.info("Connected and profile set successfully from stored MAC address.")
                         return  # 如果成功，结束线程
                     except Exception as e:
-                        print(f"Failed to connect using stored MAC address {mac}: {e}")
+                        logger.info(f"Failed to connect using stored MAC address {mac}: {e}")
             else:
-                print("No stored MAC addresses found, proceeding with scan and pair.")
+                logger.info("No stored MAC addresses found, proceeding with scan and pair.")
 
-            target_keyword = "联想Thinkplus-K3 pro"
-            try:
-                scan_and_pair_device(target_keyword)
-            except Exception as e:
-                print(f"Error: {e}")
+                target_keyword = "联想Thinkplus-K3 pro"
+                try:
+                    mac_address = scan_and_pair_device(target_keyword)
+                    profile_command = f"pactl set-card-profile bluez_card.{mac_address.replace(':', '_')} handsfree_head_unit"
+                    stdout, stderr = execute_command(profile_command)
+                    if stdout or stderr:
+                        raise Exception(f"Failed to set profile for {mac_address}: {stderr}")
+                    logger.info(f"Profile set successfully for {mac_address}")
+                except Exception as e:
+                    logger.info(f"Error: {e}")
+
+        # # 先启动pulseaudio
+        # command = "stdbuf -oL pulseaudio --start"
+        # logger.info(f"Executing command: {command}")
+        # process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # stdout, stderr = process.communicate()
+        # stdout_decoded = stdout.decode('utf-8')
+        # stderr_decoded = stderr.decode('utf-8')
+        #
+        # logger.info(f"Command output:\n{stdout_decoded}")
+        # if stderr_decoded:
+        #     logger.info(f"Command error:\n{stderr_decoded}")
 
         # 创建并启动线程
         bt_thread = threading.Thread(target=bluetooth_thread)
         bt_thread.start()
         bt_thread.join()
 
+    def start_ble_service(self):
+        logger.info("starting ble service-----------------------------------------------")
+        self.ble_thread = threading.Thread(target=ble_main, args=(on_llm_config_update,), daemon=True)
+        self.ble_thread.start()
 
     def pause(self):
         """暂停文本转语音任务"""
@@ -278,21 +344,6 @@ class Conversation(object):
     def clearQueue(self):
         while not self.queue.empty():
             self.queue.get()
-
-    def set_book_id(self, book_id):
-        self.book_id = book_id
-
-    def set_book_content_id(self, book_content_id):
-        self.book_content_id = book_content_id
-
-    def set_book_content_sequence(self, book_content_sequence):
-        self.book_content_sequence = book_content_sequence
-
-    def set_book_content_text_id(self, book_content_text_id):
-        self.book_content_text_id = book_content_text_id
-
-    def set_book_content_text_sequence(self, bookt_content_text_sequence):
-        self.book_content_text_sequence = bookt_content_text_sequence
 
     def _lastCompleted(self, index, onCompleted):
         if index >= self.tts_count - 1:
@@ -324,58 +375,76 @@ class Conversation(object):
         stream.close()
         p.terminate()
 
-    async def stream_and_play(self, phrase, silent, speed_ratio, emotion, character_category, volume=50, cache=False):
+    async def stream_and_play(self, phrase, silent, speed_ratio, emotion, voice_type, volume=50, cache=False):
         pcm_chunks = []  # 用于收集所有的音频数据块
-        async for audio_chunk in self.tts.get_speech_ws_stream(phrase, silent, speed_ratio, emotion, character_category):
+        async for audio_chunk in self.tts.get_speech_ws_stream(phrase, silent, speed_ratio, emotion, voice_type):
             pcm_chunks.append(audio_chunk)  # 收集 PCM 数据块
             # 实时播放每块数据
             self.player.doPlayChunk(audio_chunk, volume)
-        if cache:
-            # 当所有数据块播放完毕后，保存音频缓存
-            await utils.saveWsStreamVoiceCache(pcm_chunks, phrase)
+        # if cache:
+        #     # 当所有数据块播放完毕后，保存音频缓存
+        #     await utils.saveWsStreamVoiceCache(pcm_chunks, phrase)
 
-    def _ttsAction(self, msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, index, onCompleted=None):
-        if msg:
-            voice = ""
-            if utils.getCache(msg):
-                logger.info(f"第{index}段TTS命中缓存，播放缓存语音")
-                # 获取缓存音频文件，使用asyncio调用异步方法
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                voice = loop.run_until_complete(utils.getCache_async(msg))
-                loop.close()
+    def _ttsAction(self, msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, index, onCompleted=None):
+        try:
+            loop = asyncio.get_running_loop()  # 检查是否有事件循环
+        except RuntimeError:
+            loop = asyncio.new_event_loop()  # 创建一个新的事件循环
+            asyncio.set_event_loop(loop)
 
-                logger.info(f"即将播放第{index}段TTS。msg: {msg}")
-                self.player.play_sync(voice, volume, not cache)
-                self._play_silence(duration=cache_play_silence_duration)
-                if onCompleted:
-                    loop = asyncio.get_event_loop()
-                    if asyncio.iscoroutinefunction(onCompleted):
-                        # 使用 run_coroutine_threadsafe 调度协程
-                        asyncio.run_coroutine_threadsafe(onCompleted(), loop)
-                    else:
-                        # 直接调用普通函数
-                        onCompleted()
-                return voice
+        # 运行异步 stream_and_play 方法
+        loop.run_until_complete(
+            self.stream_and_play(msg, tts_silent, speed_ratio, emotion, voice_type, volume, cache))
+
+        if onCompleted:
+            loop = asyncio.get_event_loop()
+            if asyncio.iscoroutinefunction(onCompleted):
+                # 使用 run_coroutine_threadsafe 调度协程
+                asyncio.run_coroutine_threadsafe(onCompleted(), loop)
             else:
-                try:
-                    loop = asyncio.get_running_loop()  # 检查是否有事件循环
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()  # 创建一个新的事件循环
-                    asyncio.set_event_loop(loop)
-
-                # 运行异步 stream_and_play 方法
-                loop.run_until_complete(
-                    self.stream_and_play(msg, tts_silent, speed_ratio, emotion, character_category, volume, cache))
-
-                if onCompleted:
-                    loop = asyncio.get_event_loop()
-                    if asyncio.iscoroutinefunction(onCompleted):
-                        # 使用 run_coroutine_threadsafe 调度协程
-                        asyncio.run_coroutine_threadsafe(onCompleted(), loop)
-                    else:
-                        # 直接调用普通函数
-                        onCompleted()
+                # 直接调用普通函数
+                onCompleted()
+        # if msg:
+        #     voice = ""
+        #     if utils.getCache(msg):
+        #         logger.info(f"第{index}段TTS命中缓存，播放缓存语音")
+        #         # 获取缓存音频文件，使用asyncio调用异步方法
+        #         loop = asyncio.new_event_loop()
+        #         asyncio.set_event_loop(loop)
+        #         voice = loop.run_until_complete(utils.getCache_async(msg))
+        #         loop.close()
+        #
+        #         logger.info(f"即将播放第{index}段TTS。msg: {msg}")
+        #         self.player.play_sync(voice, volume, not cache)
+        #         self._play_silence(duration=cache_play_silence_duration)
+        #         if onCompleted:
+        #             loop = asyncio.get_event_loop()
+        #             if asyncio.iscoroutinefunction(onCompleted):
+        #                 # 使用 run_coroutine_threadsafe 调度协程
+        #                 asyncio.run_coroutine_threadsafe(onCompleted(), loop)
+        #             else:
+        #                 # 直接调用普通函数
+        #                 onCompleted()
+        #         return voice
+        #     else:
+        #         try:
+        #             loop = asyncio.get_running_loop()  # 检查是否有事件循环
+        #         except RuntimeError:
+        #             loop = asyncio.new_event_loop()  # 创建一个新的事件循环
+        #             asyncio.set_event_loop(loop)
+        #
+        #         # 运行异步 stream_and_play 方法
+        #         loop.run_until_complete(
+        #             self.stream_and_play(msg, tts_silent, speed_ratio, emotion, voice_type, volume, cache))
+        #
+        #         if onCompleted:
+        #             loop = asyncio.get_event_loop()
+        #             if asyncio.iscoroutinefunction(onCompleted):
+        #                 # 使用 run_coroutine_threadsafe 调度协程
+        #                 asyncio.run_coroutine_threadsafe(onCompleted(), loop)
+        #             else:
+        #                 # 直接调用普通函数
+        #                 onCompleted()
 
                 # 获取http语音
                 # voice = self.tts.get_speech_http(msg, tts_silent, speed_ratio, emotion, character_category)
@@ -514,6 +583,7 @@ class Conversation(object):
         :onSay: 朗读时的回调
         :onStream: 流式输出时的回调
         """
+        global llm_config
         statistic.report(1)
         self.interrupt()
         self.appendHistory(0, query, UUID)
@@ -532,11 +602,7 @@ class Conversation(object):
 
         context = {
             "user_input": query,
-            "book_id": self.book_id,
-            "book_content_id": self.book_content_id,
-            "book_content_sequence": self.book_content_sequence,
-            "book_content_text_id": self.book_content_text_id,
-            "book_content_text_sequence": self.book_content_text_sequence,
+            "llm_config": llm_config,
         }
 
         context_str = json.dumps(context, ensure_ascii=False)
@@ -637,10 +703,10 @@ class Conversation(object):
 
     def pardon(self):
         if not self.hasPardon:
-            self.say("抱歉，刚刚没听清，能再说一遍吗？", volume=50, character_category=-1, cache=True)
+            self.say("抱歉，刚刚没听清，能再说一遍吗？", volume=50, voice_type="BV700_streaming", cache=True)
             self.hasPardon = True
         else:
-            self.say("没听清呢", volume=50, character_category=-1, cache=True)
+            self.say("没听清呢", volume=50, voice_type="BV700_streaming", cache=True)
             self.hasPardon = False
 
     def _tts_line(self, line, cache, index=0, onCompleted=None):
@@ -662,7 +728,7 @@ class Conversation(object):
             return result
         return None
 
-    def _tts(self, msg, volume, silent, speed_ratio, emotion, character_category, cache, onCompleted=None):
+    def _tts(self, msg, volume, silent, speed_ratio, emotion, voice_type, cache, onCompleted=None):
         """
         对字符串进行 TTS 并返回合成后的音频
         :param lines: 字符串列表
@@ -680,7 +746,7 @@ class Conversation(object):
                     self.tts_count -= 1
                 if msg:
                     task = pool.submit(
-                        self._ttsAction, msg.strip(), volume, silent, speed_ratio, emotion, character_category, cache, index, onCompleted
+                        self._ttsAction, msg.strip(), volume, silent, speed_ratio, emotion, voice_type, cache, index, onCompleted
                     )
                     index += 1
                     all_task.append(task)
@@ -801,14 +867,14 @@ class Conversation(object):
                     break
                 if not self.is_speaking:
                     # clearBook是一个标志位，在播放完绘本的最后一句后传入，退出绘本故事模式，清空绘本id等设置
-                    msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, plugin, onCompleted, append_history, clearBook = task
+                    msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, plugin, onCompleted, append_history, clearBook = task
                     if not clearBook:
                         with self.tts_lock:
                             self.is_speaking = True
                             logger.info("开始处理语音...")
                             # 调用 _process_say 来执行语音处理
                         try:
-                            self._process_say(msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, plugin,
+                            self._process_say(msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, plugin,
                                                   onCompleted, append_history)
                         finally:
                             with self.tts_lock:
@@ -820,17 +886,12 @@ class Conversation(object):
                             self.tts_condition.notify()
                     else:
                         self.setStoryMode(False)
-                        self.set_book_id(None)
-                        self.set_book_content_id(None)
-                        self.set_book_content_sequence(None)
-                        self.set_book_content_text_id(None)
-                        self.set_book_content_text_sequence(None)
                 else:
                     logger.info("正在处理语音，跳过新任务")
             except Exception as e:
-                print(f"Error in processing queue: {e}")  # 输出错误信息
+                logger.info(f"Error in processing queue: {e}")  # 输出错误信息
 
-    def _process_say(self, msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, plugin, onCompleted,
+    def _process_say(self, msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, plugin, onCompleted,
                      append_history):
         """
         处理朗读逻辑，将文本转换为语音并播放
@@ -846,27 +907,27 @@ class Conversation(object):
             onCompleted = lambda: self._onCompleted(msg)
 
         # 获取 TTS 语音文件或缓存
-        audios = self._ttsAction(msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, 0, onCompleted)
+        audios = self._ttsAction(msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, 0, onCompleted)
 
 
         self._after_play(msg, audios, plugin)
 
-    def say(self, msg, volume, tts_silent=125, cache_play_silence_duration=2, speed_ratio=1.0, emotion="happy", character_category=-1, cache=False, plugin="", onCompleted=None, append_history=True, clearBook=False):
+    def say(self, msg, volume, tts_silent=125, cache_play_silence_duration=2, speed_ratio=1.0, emotion="", voice_type="BV700_streaming", cache=False, plugin="", onCompleted=None, append_history=True, clearBook=False):
         """
         将文本加入朗读队列
         """
         # 将任务放入队列
-        self.queue.put((msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, plugin, onCompleted, append_history, clearBook))
+        self.queue.put((msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, plugin, onCompleted, append_history, clearBook))
 
-    def say_with_priority(self, msg, volume, tts_silent=125, cache_play_silence_duration=2, speed_ratio=1.0, emotion="happy", character_category=-1, cache=False, plugin="", onCompleted=None, append_history=True, clearBook=False):
+    def say_with_priority(self, msg, volume, tts_silent=125, cache_play_silence_duration=2, speed_ratio=1.0, emotion="", voice_type="BV700_streaming", cache=False, plugin="", onCompleted=None, append_history=True, clearBook=False):
         """
        将文本加入优先朗读队列
        """
         # 将任务插入优先级队列
         self.priority_queue.put(
-            (msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, plugin, onCompleted, append_history, clearBook))
+            (msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, plugin, onCompleted, append_history, clearBook))
 
-    def say_sync(self, msg, volume, tts_silent=125, cache_play_silence_duration=2, speed_ratio=1.0, emotion="happy", character_category=-1, cache=False, plugin="", onCompleted=None, append_history=True):
+    def say_sync(self, msg, volume, tts_silent=125, cache_play_silence_duration=2, speed_ratio=1.0, emotion="", voice_type="BV700_streaming", cache=False, plugin="", onCompleted=None, append_history=True):
         """
         说一句话，同步方法
         :param msg: 内容
@@ -883,7 +944,7 @@ class Conversation(object):
             return
 
         logger.info(f"即将朗读语音：{msg}")
-        audios = self._ttsAction(msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, character_category, cache, 0, onCompleted)
+        audios = self._ttsAction(msg, volume, tts_silent, cache_play_silence_duration, speed_ratio, emotion, voice_type, cache, 0, onCompleted)
         self._after_play(msg, audios, plugin)
 
     def activeListen(self, silent=False, silent_count_threshold=10, recording_timeout=60):
