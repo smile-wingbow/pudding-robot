@@ -201,9 +201,9 @@ bluetoothctl pair XX:XX:XX:XX:XX:XX
 bluetoothctl trust XX:XX:XX:XX:XX:XX
 bluetoothctl connect XX:XX:XX:XX:XX:XX
 ```
-3.使用pactl set-card-profile命令来修改蓝牙连接的profile，启用麦克风(命令中bluez_card.后面的mac地址改为音箱的蓝牙mac地址)
+3.使用pactl set-card-profile命令来修改蓝牙连接的profile，启用麦克风(命令中bluez_card.后面的mac地址改为音箱的蓝牙mac地址，注意用"_"替换":")
 ```shell
-pactl set-card-profile  bluez_card.XX:XX:XX:XX:XX:XX handsfree_head_unit
+pactl set-card-profile  bluez_card.XX_XX_XX_XX_XX_XX handsfree_head_unit
 ```
 4.启动服务
 ```shell
