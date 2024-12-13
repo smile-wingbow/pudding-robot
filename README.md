@@ -175,6 +175,7 @@ dtc -I dts -O dtb -o target.dtb source.dts
 
 感谢以下项目提供的贡献：
 
+- https://github.com/ophub/amlogic-s9xxx-armbian
 - https://github.com/wzpan/wukong-robot
 - https://github.com/geekan/MetaGPT
 
