@@ -84,16 +84,9 @@ class StoryBot(Role):
         self.tts_callback_sync = tts_callback_sync
         self.listen_callback = listen_callback
 
-
-        gpt4o_llm = Config.from_yaml_file(Path("config/gpt4o.yaml"))
-        gpt4o_ca_llm = Config.from_yaml_file(Path("config/gpt4o_ca.yaml"))
         gpt4o_mini_llm = Config.from_yaml_file(Path("config/gpt4omini.yaml"))
-        kimiai_8k_llm = Config.from_yaml_file(Path("config/kimiai_8k.yaml"))
         doubao_lite_4k_llm = Config.from_yaml_file(Path("config/doubao_lite_4k.yaml"))
         doubao_lite_32k_llm = Config.from_yaml_file(Path("config/doubao_lite_32k.yaml"))
-        doubao_pro_32k = Config.from_yaml_file(Path("config/doubao_pro_32k.yaml"))
-        glm3_130B_llm = Config.from_yaml_file(Path("config/glm3_130B.yaml"))
-        moonshot_8k_llm = Config.from_yaml_file(Path("config/moonshot_8k.yaml"))
 
         self._watch([UserRequirement])
         self.set_actions([Gossip(self.tts_callback_sync, self.listen_callback, config=doubao_lite_4k_llm)])
