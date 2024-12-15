@@ -190,7 +190,13 @@ cp static/jarvis_zh_iphone.pmdl ~/.wukong/
 1.配置config目录的config2.yaml、doubao_lite_32k.yaml、doubao_lite_4k.yaml、gpt4o.yaml、gpt4omini.yaml配置，上述配置文件是在robot/agents/pudding_agent.py使用，可以自行决定使用哪个模型
 2.修改用户主目录下.wukong的config.xml，主要修改TTS和ASR引擎的设置，修改的地方有：指定TTS引擎：tts_engine: volc-tts、指定ASR引擎：asr_engine: volc-asr、以及具体的引擎配置比如（volc_yuyin的具体配置）
 
-#### 十二.启动服务：
+#### 十二.修改setting.store，把蓝牙设备的MAC地址改为要连接的音箱的蓝牙MAC地址。
+```shell
+bluetooth_devices:
+- A3:0F:B3:06:1C:A5
+```
+
+#### 十三.启动服务：
 1.启动pulseaudio
 ```shell
 pulseaudio --start
@@ -210,7 +216,7 @@ pactl set-card-profile  bluez_card.XX_XX_XX_XX_XX_XX handsfree_head_unit
 python3.9 wukong.py
 ```
 
-#### 十三.绘本的解析和故事生成：
+#### 十四.绘本的解析和故事生成：
 1.在虚拟环境下执行python3.9 book_parse_flask.py，然后访问http://ip地址:5000，上传绘本图片来生成故事。
 ```shell
 python3.9 book_parse_flask.py
