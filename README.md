@@ -61,6 +61,15 @@ ExecStopPost=/usr/bin/env gpioset 0 82=0
 ```shell
 nano ~/.asoundrc
 ```
+```shell
+pcm.!default {
+    type pulse
+}
+
+ctl.!default {
+    type pulse
+}
+```
 6.重启盒子后，执行hciconfig，可以看到蓝牙设备
 ```shell
 hci0:   Type: Primary  Bus: UART
