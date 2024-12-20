@@ -255,7 +255,7 @@ dtc -I dts -O dtb -o target.dtb source.dts
 ## 联系
 加群一起讨论
 
-![](https://github.com/smile-wingbow/pudding-robot/blob/main/assets/%E5%BE%AE%E4%BF%A1%E7%BE%A4.jpg?raw=true)
+![](https://github.com/smile-wingbow/pudding-robot/blob/main/assets/微信群.jpg?raw=true)
 
 ## ❤️ 鸣谢
 
