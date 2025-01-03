@@ -44,7 +44,7 @@ armbian-config
 ```
 2.把meson-g12a-s905l3a-cm311-with-bt(2024.10).dtb复制到/boot/dtb/amlogic/meson-g12a-s905l3a-cm311.dtb，覆盖前注意最好先备份
 ```shell
-cp bluetooth/meson-g12a-s905l3a-cm311-with-bt(2024.10).dtb /boot/dtb/amlogic/meson-g12a-s905l3a-cm311.dtb
+cp bluetooth/'meson-g12a-s905l3a-cm311-with-bt(2024.10).dtb' /boot/dtb/amlogic/meson-g12a-s905l3a-cm311.dtb
 ```
 3.把rtl8761b_config_2m复制到/usr/lib/firmware/rtl_bt/rtl8761b_config.bin
 ```shell
@@ -52,7 +52,7 @@ cp bluetooth/rtl8761b_config_2m /usr/lib/firmware/rtl_bt/rtl8761b_config.bin
 ```
 4.编辑/etc/systemd/system/bluetooth.service，在[Service]下增加以下内容：
 ```shell
-nano /etc/systemd/system/bluetooth.service
+nano /etc/systemd/system/bluetooth.target.wants/bluetooth.service
 ```
 ```shell
 ExecStopPost=/usr/bin/env gpioset 0 82=0
