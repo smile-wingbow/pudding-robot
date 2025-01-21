@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import logging
+from robot import logging
 
 import dbus
 import dbus.exceptions
@@ -51,14 +51,6 @@ except ImportError:
     MainLoop = GObject.MainLoop
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logHandler = logging.StreamHandler()
-filelogHandler = logging.FileHandler("logs.log")
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logHandler.setFormatter(formatter)
-filelogHandler.setFormatter(formatter)
-logger.addHandler(filelogHandler)
-logger.addHandler(logHandler)
 
 mainloop = None
 
@@ -365,7 +357,7 @@ class WifiConfigCharacteristic(Characteristic):
 
 class LLMConfigCharacteristic(Characteristic):
     uuid = "00001fea-0000-1000-8000-00805f9b34fb"
-    description = b"Config llm {'prompt', 'voiceType'}"
+    description = b"Config llm {'prompt', 'voiceType', 'volume'}"
 
     def __init__(self, bus, index, service, on_llm_config_update):
         Characteristic.__init__(
@@ -459,7 +451,10 @@ class LLMConfigCharacteristic(Characteristic):
                 config_data = json.loads(llm_config)
                 prompt = config_data.get("prompt")
                 voice_type = config_data.get("voiceType")
-                logger.info(f"prompt: {prompt}, voiceType: {voice_type}")
+                volume = 20
+                if "volume" in config_data:
+                    volume = config_data.get("volume")
+                logger.info(f"prompt: {prompt}, voiceType: {voice_type}, volume: {volume}")
 
                 self.on_llm_config_update(config_data)
 
@@ -696,18 +691,31 @@ class CharacteristicUserDescriptionDescriptor(Descriptor):
 
 class WifiAdvertisement(Advertisement):
     def __init__(self, bus, index):
-        Advertisement.__init__(self, bus, index, "peripheral")
+        Advertisement.__init__(self, bus, index, "broadcast")  # 使用 broadcast 类型
+
+        # 修改制造商数据，使用更通用的ID
         self.add_manufacturer_data(
-            0xFFFF, [0x70, 0x74],
+            0x0000, [0x01, 0x02]  # 使用通用制造商ID
         )
+
         self.add_service_uuid(WifiService.WIFI_SVC_UUID)
         self.add_service_uuid(LLMService.LLM_SVC_UUID)
 
-        characters = string.ascii_letters + string.digits  # 包含字母和数字
+        characters = string.ascii_letters + string.digits
         random_string = ''.join(random.choice(characters) for _ in range(4))
 
         self.add_local_name(f"布丁智能体盒子_{random_string}")
+
+        # 设置设备外观类型为通用计算机(Generic Computer)
+        self.appearance = 0x0080  # 通用计算机的外观值
+
         self.include_tx_power = True
+
+    def get_properties(self):
+        properties = super().get_properties()[LE_ADVERTISEMENT_IFACE]
+        if hasattr(self, 'appearance'):
+            properties['Appearance'] = dbus.UInt16(self.appearance)
+        return {LE_ADVERTISEMENT_IFACE: properties}
 
 def register_ad_cb():
     logger.info("Advertisement registered")
@@ -736,18 +744,21 @@ def ble_main(on_llm_config_update):
 
     adapter_obj = bus.get_object(BLUEZ_SERVICE_NAME, adapter)
     adapter_props = dbus.Interface(adapter_obj, "org.freedesktop.DBus.Properties")
-    # powered property on the controller to on
-    adapter_props.Set("org.bluez.Adapter1", "Powered", dbus.Boolean(1))
 
+    # 设置适配器属性
+    adapter_props.Set("org.bluez.Adapter1", "Powered", dbus.Boolean(1))
     adapter_props.Set("org.bluez.Adapter1", "Discoverable", dbus.Boolean(1))
-    adapter_props.Set("org.bluez.Adapter1", "Pairable", dbus.Boolean(1))
-    adapter_props.Set("org.bluez.Adapter1", "PairableTimeout", dbus.UInt32(0))  # 永久可配对
+    adapter_props.Set("org.bluez.Adapter1", "Pairable", dbus.Boolean(1))  # 改为可配对
+    adapter_props.Set("org.bluez.Adapter1", "PairableTimeout", dbus.UInt32(0))
+    adapter_props.Set("org.bluez.Adapter1", "DiscoverableTimeout", dbus.UInt32(0))
+
     # Get manager objs
     service_manager = dbus.Interface(adapter_obj, GATT_MANAGER_IFACE)
     ad_manager = dbus.Interface(adapter_obj, LE_ADVERTISING_MANAGER_IFACE)
     advertisement = WifiAdvertisement(bus, 0)
     obj = bus.get_object(BLUEZ_SERVICE_NAME, "/org/bluez")
     agent = Agent(bus, AGENT_PATH)
+    agent.set_exit_on_release(False)  # 不要在释放时退出
 
     app = Application(bus)
     app.add_service(WifiService(bus, 2))
@@ -755,7 +766,9 @@ def ble_main(on_llm_config_update):
     mainloop = MainLoop()
 
     agent_manager = dbus.Interface(obj, "org.bluez.AgentManager1")
-    agent_manager.RegisterAgent(AGENT_PATH, "NoInputNoOutput")
+    agent_manager.RegisterAgent(AGENT_PATH, "KeyboardDisplay")  # 使用 KeyboardDisplay
+    agent_manager.RequestDefaultAgent(AGENT_PATH)
+    
     try:
         ad_manager.RegisterAdvertisement(
             advertisement.get_path(),
@@ -773,7 +786,6 @@ def ble_main(on_llm_config_update):
             reply_handler=register_app_cb,
             error_handler=[register_app_error_cb],
         )
-        agent_manager.RequestDefaultAgent(AGENT_PATH)
         logger.info("启动BLE服务并进入主循环")
         mainloop.run()
     except KeyboardInterrupt:

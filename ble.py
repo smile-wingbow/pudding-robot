@@ -348,6 +348,7 @@ def set_trusted(path):
         bus.get_object("org.bluez", path), "org.freedesktop.DBus.Properties"
     )
     props.Set("org.bluez.Device1", "Trusted", True)
+    props.Set("org.bluez.Device1", "Paired", True)
 
 
 def dev_connect(path):
@@ -361,6 +362,10 @@ class Rejected(dbus.DBusException):
 
 class Agent(dbus.service.Object):
     exit_on_release = True
+    FIXED_PASSKEY = 0  # 使用固定的 PIN 码 000000
+
+    def __init__(self, bus, path):
+        super().__init__(bus, path)
 
     def set_exit_on_release(self, exit_on_release):
         self.exit_on_release = exit_on_release
@@ -384,15 +389,26 @@ class Agent(dbus.service.Object):
     def RequestPinCode(self, device):
         logger.info("RequestPinCode (%s)" % (device))
         set_trusted(device)
-        return "0000"
-        # return ask("Enter PIN Code: ")
+        return "000000"  # 固定返回 000000
 
     @dbus.service.method(AGENT_INTERFACE, in_signature="o", out_signature="u")
     def RequestPasskey(self, device):
         logger.info("RequestPasskey (%s)" % (device))
         set_trusted(device)
-        passkey = ask("Enter passkey: ")
-        return dbus.UInt32(passkey)
+        return dbus.UInt32(self.FIXED_PASSKEY)  # 固定返回 0
+
+    @dbus.service.method(AGENT_INTERFACE, in_signature="ou", out_signature="")
+    def RequestConfirmation(self, device, passkey):
+        logger.info("RequestConfirmation (%s, %06d)" % (device, passkey))
+        try:
+            set_trusted(device)
+            # 获取设备对象
+            dev = dbus.Interface(bus.get_object("org.bluez", device), "org.bluez.Device1")
+            # 尝试配对
+            dev.Pair()
+        except Exception as e:
+            logger.error(f"Error in RequestConfirmation: {e}")
+        return
 
     @dbus.service.method(AGENT_INTERFACE, in_signature="ouq", out_signature="")
     def DisplayPasskey(self, device, passkey, entered):
@@ -401,16 +417,7 @@ class Agent(dbus.service.Object):
     @dbus.service.method(AGENT_INTERFACE, in_signature="os", out_signature="")
     def DisplayPinCode(self, device, pincode):
         logger.info("DisplayPinCode (%s, %s)" % (device, pincode))
-
-    @dbus.service.method(AGENT_INTERFACE, in_signature="ou", out_signature="")
-    def RequestConfirmation(self, device, passkey):
-        logger.info("RequestConfirmation (%s, %06d)" % (device, passkey))
-        # return
-        # confirm = ask("Confirm passkey (yes/no): ")
-        # if confirm == "yes":
-        #     set_trusted(device)
-        #     return
-        # raise Rejected("Passkey doesn't match")
+        logger.info("Using PIN code: 1234")  # 添加日志以显示使用的 PIN 码
 
     @dbus.service.method(AGENT_INTERFACE, in_signature="o", out_signature="")
     def RequestAuthorization(self, device):
